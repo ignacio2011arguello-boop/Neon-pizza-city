@@ -108,6 +108,7 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           mkdir -p build
+          godot --headless --editor --path . --quit --verbose
           godot --headless --path . --verbose --export-debug "Android" build/NeonLluvia.apk 2>&1 | tee build/export.log
           test -s build/NeonLluvia.apk
 
