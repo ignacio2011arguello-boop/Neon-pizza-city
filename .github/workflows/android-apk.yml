@@ -1,70 +1,63 @@
 
 name: Build Android APK
+
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
 
-      - uses: chickensoft-games/setup-godot@v2
+    steps:
+      - name: Download repository
+        uses: actions/checkout@v4
+
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
         with:
           version: 4.3.0
           use-dotnet: false
 
-      - uses: actions/setup-java@v5
+      - name: Install Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v4
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
         with:
           packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
 
-      - name: Install export templates
+      - name: Install Godot export templates
         run: |
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable
           wget -q https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz -O /tmp/templates.tpz
           unzip -q /tmp/templates.tpz -d /tmp/godot_templates
           cp -r /tmp/godot_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable/
 
+      - name: Configure Android signing
+        run: |
+          mkdir -p ~/.android
+          keytool -genkeypair \
+            -keystore ~/.android/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
       - name: Configure Android export
         run: |
-          cat > export_presets.cfg <<'EOF'
-          [preset.0]
-          name="Android"
-          platform="Android"
-          runnable=true
-                    dedicated_server=false
-          export_filter="all_resources"
-          include_filter=""
-          exclude_filter=""
-          export_path="build/NeonLluvia.apk"
-          encrypt_pck=false
-          encrypt_directory=false
-          [preset.0.options]
-          custom_template/debug=""
-          custom_template/release=""
-          gradle_build/use_gradle_build=false
-          package/unique_name="com.neonlluvia.game"
-          package/name="Neon Lluvia"
-          package/signed=false
-          screen/immersive_mode=true
-          screen/orientation=1
-          permissions/internet=true
-          EOF
-
-      
-      
-      - name: Configure Godot Android paths
-        run: |
           mkdir -p ~/.config/godot
-          cat > ~/.config/godot/editor_settings-4.3.tres <<EOF
+          cat > ~/.config/godot/editor_settings-4.tres <<EOF
           [gd_resource type="EditorSettings" format=3]
+
           [resource]
           export/android/android_sdk_path = "$ANDROID_HOME"
           export/android/java_sdk_path = "$JAVA_HOME"
@@ -73,13 +66,51 @@ jobs:
           export/android/debug_keystore_pass = "android"
           EOF
 
-      - name: Export APK
+          cat > export_presets.cfg <<'EOF'
+          [preset.0]
+
+          name="Android"
+          platform="Android"
+          runnable=true
+          dedicated_server=false
+          custom_features=""
+          export_filter="all_resources"
+          include_filter=""
+          exclude_filter=""
+          export_path="build/NeonLluvia.apk"
+          encryption_include_filters=""
+          encryption_exclude_filters=""
+          encrypt_pck=false
+          encrypt_directory=false
+
+          [preset.0.options]
+
+          custom_template/debug=""
+          custom_template/release=""
+          gradle_build/use_gradle_build=false
+          gradle_build/gradle_build_directory=""
+          gradle_build/android_source_template=""
+          gradle_build/export_format=0
+          architectures/armeabi-v7a=true
+          architectures/arm64-v8a=true
+          architectures/x86=false
+          architectures/x86_64=false
+          package/unique_name="com.neonlluvia.game"
+          package/name="Neon Lluvia"
+          package/signed=true
+          screen/immersive_mode=true
+          screen/orientation=1
+          permissions/internet=true
+          EOF
+
+      - name: Check project and export APK
         run: |
           mkdir -p build
           godot --headless --path . --editor --quit
-          godot --headless --path . --verbose --export-debug Android build/NeonLluvia.apk
+          godot --headless --path . --export-debug Android build/NeonLluvia.apk
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: NeonLluvia-Android-APK
           path: build/NeonLluvia.apk
