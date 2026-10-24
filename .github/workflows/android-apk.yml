@@ -100,6 +100,7 @@ jobs:
       - name: Importar proyecto
         run: godot --headless --editor --path . --quit
 
+      
       - name: Exportar APK
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
@@ -107,8 +108,9 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           mkdir -p build
-          godot --headless --path . --verbose --export-debug "Android" build/NeonLluvia.apk
+          godot --headless --path . --verbose --export-debug "Android" build/NeonLluvia.apk 2>&1 | tee build/export.log
           test -s build/NeonLluvia.apk
+
 
       - name: Guardar APK
         if: success()
