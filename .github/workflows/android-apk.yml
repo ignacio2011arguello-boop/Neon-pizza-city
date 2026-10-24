@@ -68,10 +68,17 @@ jobs:
           export/android/java_sdk_path = "$JAVA_HOME"
           EOF
 
-      - name: Importar proyecto
+       - name: Diagnosticar Godot Android
         run: |
+          echo "=== VERSION ==="
+          godot --version
+          echo "=== PLANTILLAS ==="
+          ls -la "$HOME/.local/share/godot/export_templates/" || true
+          echo "=== PRESET ==="
+          cat export_presets.cfg
+          echo "=== IMPORTAR ==="
           godot --headless --editor --path . --quit
-
+          
       - name: Exportar APK
         env:
           GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
