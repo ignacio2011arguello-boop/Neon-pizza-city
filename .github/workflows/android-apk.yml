@@ -1,7 +1,7 @@
 
 name: Build Neon Lluvia APK
 
-on:
+"on":
   workflow_dispatch:
   push:
     branches:
