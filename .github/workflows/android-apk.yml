@@ -112,10 +112,15 @@ jobs:
           echo "Godot version:"
           godot --version
 
-      - name: Import and export APK
+      
+      - name: Diagnose and export APK
         run: |
           mkdir -p build
+          echo "=== Export preset ==="
+          cat export_presets.cfg
+          echo "=== Import project ==="
           godot --headless --editor --path . --quit
+          echo "=== Export APK ==="
           godot --headless --path . --verbose --export-debug Android build/NeonLluvia.apk
 
       - name: Upload APK
