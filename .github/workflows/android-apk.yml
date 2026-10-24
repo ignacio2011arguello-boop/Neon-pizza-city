@@ -58,11 +58,12 @@ jobs:
           permissions/internet=true
           EOF
 
+      
       - name: Export APK
         run: |
           mkdir -p build
           godot --headless --path . --editor --quit
-          godot --headless --path . --export-debug Android build/NeonLluvia.apk
+          godot --headless --path . --verbose --export-debug Android build/NeonLluvia.apk
 
       - uses: actions/upload-artifact@v4
         with:
