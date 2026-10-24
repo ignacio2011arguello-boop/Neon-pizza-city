@@ -37,16 +37,17 @@ jobs:
 
       - name: Install export templates
         run: |
-          mkdir -p ~/.local/share/godot/export_templates/4.3.stable
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.3.stable"
           wget -q https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz -O /tmp/templates.tpz
           unzip -q /tmp/templates.tpz -d /tmp/godot_templates
-          cp -r /tmp/godot_templates/templates/* ~/.local/share/godot/export_templates/4.3.stable/
+          cp -r /tmp/godot_templates/templates/* "$HOME/.local/share/godot/export_templates/4.3.stable/"
+          ls -la "$HOME/.local/share/godot/export_templates/4.3.stable/"
 
-      - name: Configure Android signing
+      - name: Create Android debug keystore
         run: |
-          mkdir -p ~/.android
+          mkdir -p "$HOME/.android"
           keytool -genkeypair \
-            -keystore ~/.android/debug.keystore \
+            -keystore "$HOME/.android/debug.keystore" \
             -storepass android \
             -alias androiddebugkey \
             -keypass android \
@@ -56,17 +57,22 @@ jobs:
             -dname "CN=Android Debug,O=Android,C=US"
 
       - name: Configure Godot
+        shell: bash
         run: |
-          mkdir -p ~/.config/godot
-          cat > ~/.config/godot/editor_settings-4.tres <<EOF
+          mkdir -p "$HOME/.config/godot"
+
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]
 
           [resource]
           export/android/android_sdk_path = "$ANDROID_HOME"
           export/android/java_sdk_path = "$JAVA_HOME"
+          export/android/debug_keystore = "$HOME/.android/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
           EOF
 
-          cat > export_presets.cfg <<'EOF'
+          cat > export_presets.cfg <<EOF
           [preset.0]
 
           name="Android"
@@ -98,34 +104,51 @@ jobs:
           package/unique_name="com.neonlluvia.game"
           package/name="Neon Lluvia"
           package/signed=true
+          keystore/debug="$HOME/.android/debug.keystore"
+          keystore/debug_user="androiddebugkey"
+          keystore/debug_password="android"
+          keystore/release=""
+          keystore/release_user=""
+          keystore/release_password=""
           screen/immersive_mode=true
           screen/orientation=1
           permissions/internet=true
           EOF
 
+          echo "Godot settings created."
+          test -f "$HOME/.android/debug.keystore"
+          test -n "$ANDROID_HOME"
+          test -n "$JAVA_HOME"
+
       - name: Check project files
         run: |
-          echo "Project files:"
+          echo "=== Project files ==="
           ls -la
-          echo "Scene:"
+          echo "=== Scripts ==="
+          ls -la scripts
+          echo "=== Main scene ==="
           cat main.tscn
-          echo "Godot version:"
+          echo "=== Godot version ==="
           godot --version
+          echo "=== Java version ==="
+          java -version
+          echo "=== Android SDK ==="
+          echo "$ANDROID_HOME"
 
-      
-      - name: Diagnose and export APK
+      - name: Import project
+        run: |
+          godot --headless --editor --path . --quit
+
+      - name: Export Android APK
         run: |
           mkdir -p build
-          echo "=== Export preset ==="
-          cat export_presets.cfg
-          echo "=== Import project ==="
-          godot --headless --editor --path . --quit
-          echo "=== Export APK ==="
-          godot --headless --path . --verbose --export-debug Android build/NeonLluvia.apk
+          godot --headless --path . --verbose --export-debug "Android" build/NeonLluvia.apk
+          test -s build/NeonLluvia.apk
+          ls -lh build/NeonLluvia.apk
 
       - name: Upload APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: NeonLluvia-Android-APK
           path: build/NeonLluvia.apk
+          if-no-files-found: error
