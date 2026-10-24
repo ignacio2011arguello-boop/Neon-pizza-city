@@ -139,7 +139,16 @@ jobs:
         run: |
           godot --headless --editor --path . --quit
 
-      - name: Export Android APK
+       - name: Export Android APK
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          mkdir -p build
+          godot --headless --editor --path . --quit
+          godot --headless --path . --verbose --export-debug "Android" build/NeonLluvia.apk
+          test -s build/NeonLluvia.apk
         run: |
           mkdir -p build
           godot --headless --path . --verbose --export-debug "Android" build/NeonLluvia.apk
