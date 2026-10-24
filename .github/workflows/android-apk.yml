@@ -1,7 +1,7 @@
 
 name: Build Neon Lluvia APK
 
-"on":
+on:
   workflow_dispatch:
   push:
     branches:
@@ -37,11 +37,12 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;23.2.8568313'
 
-      - name: Verificar archivos del juego
+      - name: Verificar archivos
         run: |
           test -f project.godot
           test -f main.tscn
           test -f scripts/city.gd
+          test -f export_presets.cfg
 
       - name: Crear clave de firma
         run: |
@@ -56,7 +57,7 @@ jobs:
             -validity 10000 \
             -dname "CN=Android Debug,O=Android,C=US"
 
-      - name: Configurar exportación
+      - name: Configurar rutas de Android
         run: |
           mkdir -p "$HOME/.config/godot"
           cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
@@ -67,44 +68,9 @@ jobs:
           export/android/java_sdk_path = "$JAVA_HOME"
           EOF
 
-          cat > export_presets.cfg <<'EOF'
-          [preset.0]
-          name="Android"
-          platform="Android"
-          runnable=true
-          dedicated_server=false
-          custom_features=""
-          export_filter="all_resources"
-          include_filter=""
-          exclude_filter=""
-          export_path="build/NeonLluvia.apk"
-          encryption_include_filters=""
-          encryption_exclude_filters=""
-          encrypt_pck=false
-          encrypt_directory=false
-
-          [preset.0.options]
-          custom_template/debug=""
-          custom_template/release=""
-          gradle_build/use_gradle_build=false
-          architectures/armeabi-v7a=false
-          architectures/arm64-v8a=true
-          package/unique_name="com.neonlluvia.game"
-          package/name="Neon Lluvia"
-          package/signed=true
-          screen/immersive_mode=true
-          screen/orientation=1
-          permissions/internet=true
-          EOF
-
       - name: Importar proyecto
-        run: godot --headless --editor --path . --quit
-
-      
-          godot --headless --path . --verbose --export-debug "Android" build/NeonLluvia.apk 2>&1 | tee build/export.log || true
-          echo "===== REGISTRO DE EXPORTACION ====="
-          cat build/export.log
-          test -s build/NeonLluvia.apk
+        run: |
+          godot --headless --editor --path . --quit
 
       - name: Exportar APK
         env:
@@ -113,10 +79,11 @@ jobs:
           GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
         run: |
           mkdir -p build
-          godot --headless --editor --path . --quit --verbose
-          godot --headless --path . --verbose --export-debug "Android" build/NeonLluvia.apk 2>&1 | tee build/export.log
+          set -o pipefail
+          godot --headless --path . --verbose \
+            --export-debug "Android" build/NeonLluvia.apk \
+            2>&1 | tee build/export.log
           test -s build/NeonLluvia.apk
-
 
       - name: Guardar APK
         if: success()
