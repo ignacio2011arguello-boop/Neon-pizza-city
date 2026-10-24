@@ -1,99 +1,99 @@
 name: Build Neon Lluvia APK
 
 on:
-workflow_dispatch:
-push:
-branches:
-- main
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
-contents: read
+  contents: read
 
 jobs:
-build:
-runs-on: ubuntu-22.04
-timeout-minutes: 40
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
 
-steps:
-  - name: Descargar proyecto
-    uses: actions/checkout@v4
+    steps:
+      - name: Descargar proyecto
+        uses: actions/checkout@v4
 
-  - name: Instalar Godot 4.3
-    uses: chickensoft-games/setup-godot@v2
-    with:
-      version: 4.3.0
-      use-dotnet: false
-      include-templates: true
+      - name: Instalar Godot 4.3
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.3.0
+          use-dotnet: false
+          include-templates: true
 
-  - name: Instalar Java 17
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '17'
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-  - name: Preparar Android SDK
-    uses: android-actions/setup-android@v3
+      - name: Preparar Android SDK
+        uses: android-actions/setup-android@v3
 
-  - name: Instalar componentes Android
-    run: |
-      sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;23.2.8568313"
+      - name: Instalar componentes Android
+        run: |
+          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "ndk;23.2.8568313"
 
-  - name: Verificar archivos
-    run: |
-      test -f project.godot
-      test -f main.tscn
-      test -f scripts/city.gd
-      test -f export_presets.cfg
-      echo "Archivos del proyecto encontrados"
+      - name: Verificar archivos
+        run: |
+          test -f project.godot
+          test -f main.tscn
+          test -f scripts/city.gd
+          test -f export_presets.cfg
+          echo "Archivos del proyecto encontrados"
 
-  - name: Crear clave de firma temporal
-    run: |
-      mkdir -p "$HOME/.android"
-      keytool -genkeypair \
-        -keystore "$HOME/.android/debug.keystore" \
-        -storepass android \
-        -alias androiddebugkey \
-        -keypass android \
-        -keyalg RSA \
-        -keysize 2048 \
-        -validity 10000 \
-        -dname "CN=Android Debug,O=Android,C=US"
+      - name: Crear clave de firma temporal
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
 
-  - name: Configurar rutas Android
-    run: |
-      mkdir -p "$HOME/.config/godot"
-      cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
-      [gd_resource type="EditorSettings" format=3]
+      - name: Configurar rutas Android
+        run: |
+          mkdir -p "$HOME/.config/godot"
+          cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
 
-      [resource]
-      export/android/android_sdk_path = "$ANDROID_HOME"
-      export/android/java_sdk_path = "$JAVA_HOME"
-      EOF
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          EOF
 
-  - name: Revisar plantillas e importar proyecto
-    run: |
-      godot --version
-      echo "=== PLANTILLAS DE EXPORTACIÓN ==="
-      ls -la "$HOME/.local/share/godot/export_templates/" || true
-      echo "=== IMPORTAR PROYECTO ==="
-      godot --headless --editor --path . --quit
+      - name: Revisar plantillas e importar proyecto
+        run: |
+          godot --version
+          echo "=== PLANTILLAS DE EXPORTACIÓN ==="
+          ls -la "$HOME/.local/share/godot/export_templates/" || true
+          echo "=== IMPORTAR PROYECTO ==="
+          godot --headless --editor --path . --quit
 
-  - name: Exportar APK
-    env:
-      GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
-      GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
-      GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
-    run: |
-      mkdir -p build
-      set -o pipefail
-      godot --headless --path . --verbose \
-        --export-debug "Android" build/NeonLluvia.apk \
-        2>&1 | tee build/export.log
+      - name: Exportar APK
+        env:
+          GODOT_ANDROID_KEYSTORE_DEBUG_PATH: /home/runner/.android/debug.keystore
+          GODOT_ANDROID_KEYSTORE_DEBUG_USER: androiddebugkey
+          GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD: android
+        run: |
+          mkdir -p build
+          set -o pipefail
+          godot --headless --path . --verbose \
+            --export-debug "Android" build/NeonLluvia.apk \
+            2>&1 | tee build/export.log
 
-  - name: Guardar APK
-    if: success()
-    uses: actions/upload-artifact@v4
-    with:
-      name: NeonLluvia-Android-APK
-      path: build/NeonLluvia.apk
-      if-no-files-found: error
+      - name: Guardar APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeonLluvia-Android-APK
+          path: build/NeonLluvia.apk
+          if-no-files-found: error
